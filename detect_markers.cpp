@@ -53,7 +53,8 @@ using namespace cv;
  */
 static void help() {
     cout << "Detects a tag and sends its position via ZMQ push socket." << endl;
-    cout << "Listen to 0.0.0.0:7777" << endl;
+    cout << "Listen to 0.0.0.0:7777" << endl << endl;
+    cout << "-conf <configurationFile> # Main configuration file to set mandatory options" << endl << endl;
     cout << "Parameters: " << endl;
     cout << "-d <dictionary> # DICT_4X4_50=0, DICT_4X4_100=1, DICT_4X4_250=2, "
          << "DICT_4X4_1000=3, DICT_5X5_50=4, DICT_5X5_100=5, DICT_5X5_250=6, DICT_5X5_1000=7, "
@@ -66,7 +67,20 @@ static void help() {
          << "scale in camera pose, default 0.1" << endl;
     cout << "[-dp <detectorParams>] # File of marker detector parameters" << endl;
     cout << "[-r] # show rejected candidates too" << endl;
-    cout << "[-t] # Detect from top";
+    cout << "[-t] # Detect from top" << endl << endl;
+    cout << "Example of configuration: " << endl;
+    cout << "%%YAML:1.0" << endl;
+    cout << "camera_name: \"HD Pro Webcam C920\"  # Get the name from \"v4l2-ctl --list-devices\"" << endl;
+    cout << "camera_calib: \"c920-2.yml\"   # Path is relative to this file location" << endl << endl;
+
+    cout << "# Marker to be tracked" << endl;
+    cout << "marker_dictionary: 0" << endl;
+    cout << "marker_id: 1" << endl;
+    cout << "marker_length: 0.35" << endl << endl;
+
+    cout << "# Camera position" << endl;
+    cout << "camera_top: true" << endl;
+
 }
 
 
@@ -141,6 +155,9 @@ static bool readDetectorParameters(string filename, aruco::DetectorParameters &p
 /**
  */
 int main(int argc, char *argv[]) {
+    FileStorage conf = NULL;
+    bool has_conf = false;
+    int marker_id = 0;
     float cx, cy, cz;
     float gx, gy, gz;
     float frameTime = 0;
@@ -157,12 +174,24 @@ int main(int argc, char *argv[]) {
     int rc = zmq_bind (controller, "tcp://*:7777");
     assert (rc == 0);
 
-    if(!isParam("-d", argc, argv)) {
+    if(!isParam("-d", argc, argv) && !isParam("-conf", argc, argv)) {
         help();
         return 0;
     }
 
-    int dictionaryId = atoi(getParam("-d", argc, argv).c_str());
+    if (isParam("-conf", argc, argv)) {
+      conf = FileStorage(getParam("-conf", argc, argv), FileStorage::READ);
+      has_conf = true;
+
+      fromTop = (int)conf["camera_top"] != 0;
+    }
+
+    int dictionaryId = 0;
+    if (has_conf) {
+      conf["marker_dictionary"] >> dictionaryId;
+    } else {
+      dictionaryId = atoi(getParam("-d", argc, argv).c_str());
+    }
     aruco::Dictionary dictionary =
         aruco::getPredefinedDictionary(aruco::PREDEFINED_DICTIONARY_NAME(dictionaryId));
 
@@ -171,7 +200,20 @@ int main(int argc, char *argv[]) {
 
     bool estimatePose = false;
     Mat camMatrix, distCoeffs;
-    if(isParam("-c", argc, argv)) {
+    if (has_conf) {
+        String filename = conf["camera_calib"];
+        string confPath = getParam("-conf", argc, argv);
+        string fullPath = confPath.substr(0, confPath.find_last_of("/"));
+        fullPath.append("/");
+        fullPath.append(filename);
+
+        bool readOk = readCameraParameters(filename, camMatrix, distCoeffs);
+        if(!readOk) {
+            cerr << "Invalid camera file" << endl;
+            return 0;
+        }
+        estimatePose = true;
+    } else if(isParam("-c", argc, argv)) {
         bool readOk = readCameraParameters(getParam("-c", argc, argv), camMatrix, distCoeffs);
         if(!readOk) {
             cerr << "Invalid camera file" << endl;
@@ -179,7 +221,13 @@ int main(int argc, char *argv[]) {
         }
         estimatePose = true;
     }
-    float markerLength = (float)atof(getParam("-l", argc, argv, "0.1").c_str());
+
+    float markerLength = 0;
+    if (has_conf) {
+      markerLength = conf["marker_length"];
+    } else {
+      markerLength = (float)atof(getParam("-l", argc, argv, "0.1").c_str());
+    }
 
     aruco::DetectorParameters detectorParams;
     if(isParam("-dp", argc, argv)) {
@@ -253,6 +301,8 @@ int main(int argc, char *argv[]) {
                 for(unsigned int i = 0; i < ids.size(); i++)
                     aruco::drawAxis(imageCopy, camMatrix, distCoeffs, rvecs[i], tvecs[i],
                                     markerLength * 0.5f);
+            } else {
+              cout << "Warning: camera calib not available, no pose calculation!" << endl;
             }
         }
 
@@ -282,7 +332,7 @@ int main(int argc, char *argv[]) {
 
         char buffer[255];
         // Assuming there is only one tag, sending its position via ZMQ
-        if (ids.size()>0) {
+        if (ids.size()>0 && marker_id && ids[0] == marker_id && estimatePose) {
 
           angle = atan2((corners[0][0].y-corners[0][2].y), (corners[0][2].x-corners[0][0].x))*180/M_PI;
           angle += 45;
