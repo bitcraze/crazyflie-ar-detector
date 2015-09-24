@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
         fullPath.append("/");
         fullPath.append(filename);
 
-        bool readOk = readCameraParameters(filename, camMatrix, distCoeffs);
+        bool readOk = readCameraParameters(fullPath, camMatrix, distCoeffs);
         if(!readOk) {
             cerr << "Invalid camera file" << endl;
             return 0;
