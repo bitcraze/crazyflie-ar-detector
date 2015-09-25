@@ -195,6 +195,11 @@ int main(int argc, char *argv[]) {
     aruco::Dictionary dictionary =
         aruco::getPredefinedDictionary(aruco::PREDEFINED_DICTIONARY_NAME(dictionaryId));
 
+    if (has_conf) {
+      marker_id = conf["marker_id"];
+      cout << "Detecting marker ID " << marker_id << endl;
+    }
+
     bool showRejected = false;
     if(isParam("-r", argc, argv)) showRejected = true;
 
@@ -332,7 +337,7 @@ int main(int argc, char *argv[]) {
 
         char buffer[255];
         // Assuming there is only one tag, sending its position via ZMQ
-        if (ids.size()>0 && marker_id && ids[0] == marker_id && estimatePose) {
+        if (ids.size()>0 && (marker_id==0 || ids[0] == marker_id) && estimatePose) {
 
           angle = atan2((corners[0][0].y-corners[0][2].y), (corners[0][2].x-corners[0][0].x))*180/M_PI;
           angle += 45;
