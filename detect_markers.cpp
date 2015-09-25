@@ -8,6 +8,7 @@ copy or use the software.
                        (3-clause BSD License)
 
 Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+Copyright (C) 2015, Bitcraze AB
 Third party copyrights are property of their respective owners.
 
 Redistribution and use in source and binary forms, with or without modification,
