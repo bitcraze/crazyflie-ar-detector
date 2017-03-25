@@ -124,30 +124,30 @@ static bool readCameraParameters(string filename, Mat &camMatrix, Mat &distCoeff
 
 /**
  */
-static bool readDetectorParameters(string filename, aruco::DetectorParameters &params) {
+static bool readDetectorParameters(string filename, Ptr<aruco::DetectorParameters> &params) {
     FileStorage fs(filename, FileStorage::READ);
     if(!fs.isOpened())
         return false;
-    fs["adaptiveThreshWinSizeMin"] >> params.adaptiveThreshWinSizeMin;
-    fs["adaptiveThreshWinSizeMax"] >> params.adaptiveThreshWinSizeMax;
-    fs["adaptiveThreshWinSizeStep"] >> params.adaptiveThreshWinSizeStep;
-    fs["adaptiveThreshConstant"] >> params.adaptiveThreshConstant;
-    fs["minMarkerPerimeterRate"] >> params.minMarkerPerimeterRate;
-    fs["maxMarkerPerimeterRate"] >> params.maxMarkerPerimeterRate;
-    fs["polygonalApproxAccuracyRate"] >> params.polygonalApproxAccuracyRate;
-    fs["minCornerDistanceRate"] >> params.minCornerDistanceRate;
-    fs["minDistanceToBorder"] >> params.minDistanceToBorder;
-    fs["minMarkerDistanceRate"] >> params.minMarkerDistanceRate;
-    fs["doCornerRefinement"] >> params.doCornerRefinement;
-    fs["cornerRefinementWinSize"] >> params.cornerRefinementWinSize;
-    fs["cornerRefinementMaxIterations"] >> params.cornerRefinementMaxIterations;
-    fs["cornerRefinementMinAccuracy"] >> params.cornerRefinementMinAccuracy;
-    fs["markerBorderBits"] >> params.markerBorderBits;
-    fs["perspectiveRemovePixelPerCell"] >> params.perspectiveRemovePixelPerCell;
-    fs["perspectiveRemoveIgnoredMarginPerCell"] >> params.perspectiveRemoveIgnoredMarginPerCell;
-    fs["maxErroneousBitsInBorderRate"] >> params.maxErroneousBitsInBorderRate;
-    fs["minOtsuStdDev"] >> params.minOtsuStdDev;
-    fs["errorCorrectionRate"] >> params.errorCorrectionRate;
+    fs["adaptiveThreshWinSizeMin"] >> params->adaptiveThreshWinSizeMin;
+    fs["adaptiveThreshWinSizeMax"] >> params->adaptiveThreshWinSizeMax;
+    fs["adaptiveThreshWinSizeStep"] >> params->adaptiveThreshWinSizeStep;
+    fs["adaptiveThreshConstant"] >> params->adaptiveThreshConstant;
+    fs["minMarkerPerimeterRate"] >> params->minMarkerPerimeterRate;
+    fs["maxMarkerPerimeterRate"] >> params->maxMarkerPerimeterRate;
+    fs["polygonalApproxAccuracyRate"] >> params->polygonalApproxAccuracyRate;
+    fs["minCornerDistanceRate"] >> params->minCornerDistanceRate;
+    fs["minDistanceToBorder"] >> params->minDistanceToBorder;
+    fs["minMarkerDistanceRate"] >> params->minMarkerDistanceRate;
+    fs["doCornerRefinement"] >> params->doCornerRefinement;
+    fs["cornerRefinementWinSize"] >> params->cornerRefinementWinSize;
+    fs["cornerRefinementMaxIterations"] >> params->cornerRefinementMaxIterations;
+    fs["cornerRefinementMinAccuracy"] >> params->cornerRefinementMinAccuracy;
+    fs["markerBorderBits"] >> params->markerBorderBits;
+    fs["perspectiveRemovePixelPerCell"] >> params->perspectiveRemovePixelPerCell;
+    fs["perspectiveRemoveIgnoredMarginPerCell"] >> params->perspectiveRemoveIgnoredMarginPerCell;
+    fs["maxErroneousBitsInBorderRate"] >> params->maxErroneousBitsInBorderRate;
+    fs["minOtsuStdDev"] >> params->minOtsuStdDev;
+    fs["errorCorrectionRate"] >> params->errorCorrectionRate;
     return true;
 }
 
@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
     } else {
       dictionaryId = atoi(getParam("-d", argc, argv).c_str());
     }
-    aruco::Dictionary dictionary =
+    Ptr<aruco::Dictionary> dictionary =
         aruco::getPredefinedDictionary(aruco::PREDEFINED_DICTIONARY_NAME(dictionaryId));
 
     if (has_conf) {
@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
       markerLength = (float)atof(getParam("-l", argc, argv, "0.1").c_str());
     }
 
-    aruco::DetectorParameters detectorParams;
+    Ptr<aruco::DetectorParameters> detectorParams = aruco::DetectorParameters::create();
     if(isParam("-dp", argc, argv)) {
         bool readOk = readDetectorParameters(getParam("-dp", argc, argv), detectorParams);
         if(!readOk) {
@@ -243,7 +243,7 @@ int main(int argc, char *argv[]) {
             return 0;
         }
     }
-    detectorParams.doCornerRefinement = true; // do corner refinement in markers
+    detectorParams->doCornerRefinement = true; // do corner refinement in markers
 
     VideoCapture inputVideo;
     int waitTime;
@@ -281,7 +281,7 @@ int main(int argc, char *argv[]) {
 
         vector< int > ids;
         vector< vector< Point2f > > corners, rejected;
-        vector< Mat > rvecs, tvecs;
+        vector< Vec3d > rvecs, tvecs;
 
         // detect markers and estimate pose
         aruco::detectMarkers(image, dictionary, corners, ids, detectorParams, rejected);
@@ -343,9 +343,9 @@ int main(int argc, char *argv[]) {
           angle = atan2((corners[0][0].y-corners[0][2].y), (corners[0][2].x-corners[0][0].x))*180/M_PI;
           angle += 45;
 
-          pos_x = tvecs[0].at<double>(0);
-          pos_y = tvecs[0].at<double>(1);
-          pos_z = tvecs[0].at<double>(2);
+          pos_x = tvecs[0][0];
+          pos_y = tvecs[0][1];
+          pos_z = tvecs[0][2];
 
           if (fromTop) {
             //pos_x = pos_x;
@@ -370,20 +370,20 @@ int main(int argc, char *argv[]) {
         }
 
         // Calulate difference between ground and copter
-        for (int i=0; i<ids.size(); i++) {
+        for (unsigned int i=0; i < ids.size(); i++) {
           if (ids[i] == 0) {
-            cx = tvecs[i].at<double>(0);
-            cy = tvecs[i].at<double>(1);
-            cz = tvecs[i].at<double>(2);
+            cx = tvecs[i][0];
+            cy = tvecs[i][1];
+            cz = tvecs[i][2];
             printf("%f\t%f\t%f\n", cx, cy, cz);
-            copter = tvecs[i].clone();
+            copter = Mat(tvecs[i]);
             detect ++;
           } else if (ids[i] == 1) {
-            gx = tvecs[i].at<double>(0);
-            gy = tvecs[i].at<double>(1);
-            gz = tvecs[i].at<double>(2);
+            gx = tvecs[i][0];
+            gy = tvecs[i][1];
+            gz = tvecs[i][2];
             printf("%f\t%f\t%f\n", gx, gy, gz);
-            ground = tvecs[i].clone();
+            ground = Mat(tvecs[i]);
             Rodrigues(rvecs[i], groundRot);
 
             detect ++;
