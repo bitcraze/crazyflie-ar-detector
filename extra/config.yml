@@ -2,9 +2,9 @@
 camera_calib: "c920-2.yml"   # Path is relative to this file location
 
 # Marker to be tracked
-marker_dictionary: 0
-marker_id: 1
-marker_length: 0.35
+marker_dictionary: 16
+marker_id: 1001
+marker_length: 0.035
 
 # Camera position
 camera_top: 1
