@@ -33,7 +33,7 @@ Compilation
 
 The requirements are:
  - libzmq3-dev
- - OpenCV3 compiled with contrib (see bellow for compilation under linux)
+ - OpenCV 3.2.0 compiled with contrib (see bellow for compilation under linux)
 
 It compiles with cmake:
 
@@ -81,14 +81,18 @@ Compile OpenCV3
 
 Uninstall the Ubuntu openCV package to make sure there is no conflict.
 
-Procedure to compile opencv3 with contrib libs (tested on Ubuntu 14.04):
+Procedure to compile opencv 3.2.0 with contrib libs (tested on Ubuntu 16.04):
 ```
 $ git clone https://github.com/Itseez/opencv
 $ git clone https://github.com/Itseez/opencv_contrib
+$ cd opencv_contrib
+$ git checkout 3.2.0
+$ cd  ..
 $ cd opencv
+$ git checkout 3.2.0
 $ mkdir build
 $ cd build
-$ cmake -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules -DBUILD_opencv_legacy=ON ..
+$ cmake -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules ..
 $ time make -j6  # This takes about 45min
 $ sudo make install
 ```
