@@ -99,3 +99,7 @@ $ cmake -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules ..
 $ time make -j6  # This takes about 45min
 $ sudo make install
 ```
+
+## Contribute
+
+Go to [contribute page](https://www.bitcraze.io/contribute/) on our website to learn more.
