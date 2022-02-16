@@ -1,6 +1,9 @@
 Crazyflie AR Detector
 =====================
 
+**This repository is not activly being maintained, but this might change in the future so feel free to make an issue to request a new functionality.**
+
+
 This program is greatly based on the OpenCV3 [detect_marker example](https://github.com/Itseez/opencv_contrib/blob/master/modules/aruco/samples/detect_markers.cpp).
 
 Tested only on Ubuntu Linux. Should work on all Linux distribution and may work
